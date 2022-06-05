@@ -3,7 +3,7 @@ const {CARDS, WORDS} = require("../const")
 const {Scrum} = require('./base')
 
 const {
-    JOKE_R, JOKE_RR, START_R, WORD_R, WORD_RR
+    JOKE_R, JOKE_RR, START_R, WORD_R, WORD_RR, END_R
 } = require('../regex')
 
 const COMMANDS = {
@@ -17,6 +17,9 @@ const COMMANDS = {
     word7: {
         test: WORD_R,
         retrieve: WORD_RR
+    },
+    EndOfGame: {
+        test: END_R
     }
 };
 
@@ -30,6 +33,9 @@ class Main extends Scrum {
     commands;
     word = null;
     cards = new Set();
+    usedCards = new Set();
+    score = 0;
+    countRounds = 0;
 
     constructor(props) {
         super(props);
@@ -45,43 +51,54 @@ class Main extends Scrum {
     }
 
     async start(ctx){
+        await this.write(ctx.message.from_id, {message: `Привет! Сыйграйте 10 раундов, чтобы узнать, кто вы!!! `+
+        `Чтобы ввести ответ воспользуйтесь командой "Картинка" `+
+        `Если вам надоест, пишите "Закончить"`})
+        this.RoundInGame(ctx);
+    }
 
-        //console.log(ctx);
+    async RoundInGame(ctx){
         let cards = new Set(); 
-        while (cards.size<1){
-            cards.add(getRandomInt(1,2));
+        while (cards.size<5){
+            var newCard = getRandomInt(1,98)
+            if (!this.usedCards.has(newCard)){
+                cards.add(newCard);
+                this.usedCards.add(newCard);
+            }
         }
-        //const ids = [...cards.values()].reduce( (carry, v) => {
-            // carry += `ном ${v} `;
-            // return carry;
-            // } , '');
-         let i = 0;
+        let i = 0;
         let attachment = [...cards.values()].reduce((carry, n) => {
-        if(i === 0) {
-            carry += CARDS[n];
-        } else {
-            carry += ',' + CARDS[n]
-        }
-        i++;
-        return carry;
+            if(i === 0) {
+                carry += CARDS[n];
+            } else {
+                carry += ',' + CARDS[n]
+            }
+            i++;
+            return carry;
         },"")
-        let cardsArr = [...cards.values()];
-        
-        console.log({cardsArr});
-        
-        let rndCard = cardsArr[getRandomInt(0, cardsArr.length-1)]
-        console.log({rndCard});
 
-        let words = WORDS[rndCard];
-        console.log({words});
-        let word = words[getRandomInt(0, words.length-1)]
-        
+        const cardsArr = [...cards.values()];
+        const allWords = cardsArr.reduce((carry, card) => {
+            carry.push(...WORDS[card])
+            return carry;
+        }, []);
+
+        var duplicate = {};
+        for(const word of allWords) {
+            if(!duplicate[word]) {
+                duplicate[word] = 1;
+            } else {
+                ++duplicate[word]
+            } 
+        }
+        var uniqueWords = Object.entries(duplicate).filter(
+            ([word, count]) => count === 1
+        ).map(([word]) => word);
+        const word = uniqueWords[getRandomInt(0, uniqueWords.length-1)]
         this.word = word;
         this.cards = cards;
-        console.log(word);
-        await this.write(ctx.message.from_id, {attachment, message: "card"})
+        await this.write(ctx.message.from_id, {attachment, message: "Ваши карточки"})
         await this.write(ctx.message.from_id, {message: `Угадайте картинку по слову ${word}`})
-        // await ctx.reply(``)
     }
 
     async word7(ctx, {word}){
@@ -91,28 +108,74 @@ class Main extends Scrum {
                 const scheme = Object.entries(WORDS);
                 for(const item of scheme) {
                     const [number, keywords] = item;
-                    console.log({number, picNumber, keywords});
-                    if(keywords.includes(this.word) && +number === picNumber) {
+                    if (keywords.includes(this.word) && +number === picNumber) {
                         this.word = null;
                         this.cards = new Set();
+                        this.score += 3;
                         await ctx.reply('+3')
-                
-                        return ctx.reply('введите старт')
+                        this.countRounds++;
+                        if(this.countRounds < 10){
+                            return this.RoundInGame(ctx);
+                        }
+                        else {
+                            return this.EndOfGame(ctx);
+                        }
                     }
                 }
                 
             }
-            
-            
         }
-        console.log("зашло");
-                this.word = null;
-                this.cards = new Set();
-               await ctx.reply('0')
-                
-                return ctx.reply('введите старт')
+        this.word = null;
+        this.cards = new Set();
+        await ctx.reply('0')
+        this.countRounds++;
+        if(this.countRounds < 10){
+            return this.RoundInGame(ctx);
+        }
+        else{
+            return this.EndOfGame(ctx);
+        }
+    }
+
+    async EndOfGame (ctx){
+        if(this.score === 30){
+            await ctx.reply('Вы большой кот!');
+            await this.write(ctx.message.from_id, {message: `Ваш счет ${this.score}`});
+            this.score = 0;
+            this.countRounds = 0;
+            this.usedCards = new Set();
+        }
+        else if(this.score >= 24){
+            await ctx.reply('Вы кот поменьше');
+            await this.write(ctx.message.from_id, {message: `Ваш счет ${this.score}`});
+            this.score = 0;
+            this.countRounds = 0;
+        }
+        else if(this.score >= 15){
+            await ctx.reply('Вы маленький кот, жесть');
+            await this.write(ctx.message.from_id, {message: `Ваш счет ${this.score}`});
+            this.score = 0;
+            this.countRounds = 0;
+            this.usedCards = new Set();
+        }
+        else if(this.score >= 6){
+            await ctx.reply('Вы няшка');
+            await this.write(ctx.message.from_id, {message: `Ваш счет ${this.score}`});
+            this.score = 0;
+            this.countRounds = 0;
+            this.usedCards = new Set();
+        }
+        else{
+            await ctx.reply('Ооо... победителевое');
+            await this.write(ctx.message.from_id, {message: `Ваш счет ${this.score}`});
+            this.score = 0;
+            this.countRounds = 0;
+            this.usedCards = new Set();
+        }
     }
 }
+
+
 
 module.exports = {
     Main

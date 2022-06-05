@@ -1,4 +1,4 @@
-const {VK_ID_REG_EX, VK_RETRIEVE_ID_REG_EX, NUMBER_ID, NUMBER_ID_RETRIEVE} = require('../meat/regex')
+const {VK_ID_REG_EX, VK_RETRIEVE_ID_REG_EX, NUMBER_ID, NUMBER_ID_RETRIEVE} = require('./regex')
 
 function rnd() {
     return Math.random() * 100000
