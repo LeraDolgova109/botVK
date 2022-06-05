@@ -56,9 +56,9 @@ class Main extends Scrum {
     }
 
     async start(ctx){
-        const peer = ctx.message.from_id
+        const peer = ctx.message.from_id;
         await this.write(ctx.message.from_id, {message: `Привет! Сыйграйте 10 раундов, чтобы узнать, кто вы!!! `+
-                `Чтобы ввести ответ воспользуйтесь командой "Картинка" `+
+                `Чтобы ввести ответ воспользуйтесь командой "Картинка". `+
                 `Если вам надоест, пишите "Закончить"`})
         this.word[peer] = null;
         this.cards[peer] = new Set();
@@ -69,7 +69,7 @@ class Main extends Scrum {
     }
 
     async RoundInGame(ctx){
-        const peer = ctx.message.from_id
+        const peer = ctx.message.from_id;
         let cards = new Set();
         while (cards.size<5){
             var newCard = getRandomInt(1,98)
@@ -110,18 +110,18 @@ class Main extends Scrum {
         this.word[peer] = word;
         this.cards[peer] = cards;
         await this.write(ctx.message.from_id, {attachment, message: "Ваши карточки"})
-        await this.write(ctx.message.from_id, {message: `Угадайте картинку по слову ${word}`})
+        await this.write(ctx.message.from_id, {message: `Угадайте картинку по слову "${word}"`})
     }
 
     async word7(ctx, { word } ){
-        const peer = ctx.message.from_id
+        const peer = ctx.message.from_id;
         const picNumber = +word;
         if(this.cards[peer].has(picNumber)) {
             if(this.word[peer] && this.cards[peer].size) {
                 const scheme = Object.entries(WORDS);
                 for(const item of scheme) {
                     const [number, keywords] = item;
-                    if (keywords.includes(this.word) && +number === picNumber) {
+                    if (keywords.includes(this.word[peer]) && +number === picNumber) {
                         this.word[peer] = null;
                         this.cards[peer] = new Set();
                         this.score[peer] += 3;
